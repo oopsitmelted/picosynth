@@ -5,6 +5,7 @@
 /* Library includes. */
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "hardware/clocks.h"
 
 /* Task includes */
 #include "log_task.h"
@@ -41,6 +42,7 @@ void vAliveTask(void *pvParameters)
 
 int main( void )
 {
+
     prvSetupHardware();
 
     /* Create logging task */
@@ -83,6 +85,8 @@ int main( void )
 
 static void prvSetupHardware( void )
 {
+    // Set a 132.000 MHz system clock to more evenly divide the audio frequencies
+    set_sys_clock_khz(132000, true);
     stdio_init_all();
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, 1);

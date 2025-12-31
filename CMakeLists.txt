@@ -11,7 +11,7 @@ include(pico_sdk_import.cmake)
 # Pull in FreeRTOS
 include(FreeRTOS_Kernel_import.cmake)
 
-project(example C CXX ASM)
+project(synth C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -22,12 +22,22 @@ add_executable(synth
         log_task.c
         midi_task.c
         audio_task.c
+        i2s.c
         )
 
+pico_generate_pio_header(synth ${CMAKE_CURRENT_LIST_DIR}/i2s.pio)
 
 target_include_directories(synth PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/../../Common/include)
 
-target_link_libraries(synth pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap4)
+target_link_libraries(synth 
+        pico_stdlib
+        hardware_dma
+        hardware_pio
+        hardware_clocks
+        FreeRTOS-Kernel 
+        FreeRTOS-Kernel-Heap4
+        )
+
 pico_add_extra_outputs(synth)
