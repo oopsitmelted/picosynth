@@ -3,6 +3,8 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Pull in SDK (must be before project)
 include(pico_sdk_import.cmake)
 
@@ -15,23 +17,17 @@ set(CMAKE_CXX_STANDARD 17)
 
 pico_sdk_init()
 
-add_executable(main_blinky
+add_executable(synth
         main.c
-        main_blinky.c
+        log_task.c
+        midi_task.c
+        audio_task.c
         )
 
-target_compile_definitions(main_blinky PRIVATE
-        mainCREATE_SIMPLE_BLINKY_DEMO_ONLY=1
-        )
 
-target_include_directories(main_blinky PRIVATE
+target_include_directories(synth PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/../../Common/include)
 
-target_link_libraries(main_blinky pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap4)
-pico_add_extra_outputs(main_blinky)
-
-#PROJECT(examples)
-
-#add_subdirectory(OnEitherCore)
-#add_subdirectory(Standard)
+target_link_libraries(synth pico_stdlib FreeRTOS-Kernel FreeRTOS-Kernel-Heap4)
+pico_add_extra_outputs(synth)
