@@ -77,6 +77,10 @@ int main( void )
 				ALIVE_TASK_PRIORITY, 	            /* The priority assigned to the task. */
 				NULL );	
 
+    /* Initialize Tasks */
+    vAudioTaskInit();
+    vMidiTaskInit();
+
     /* Start the tasks and timer running. */
 	vTaskStartScheduler();
     return 0;

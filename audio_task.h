@@ -5,5 +5,6 @@
 #include "task.h"
 
 void vAudioTask(void *pvParameters);
+void vAudioTaskInit(void);
 
 #endif // AUDIO_TASK_H
