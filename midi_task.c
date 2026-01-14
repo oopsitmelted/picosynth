@@ -10,6 +10,15 @@
 #define MIDI_TX_PIN       4
 #define MIDI_RX_PIN       5
 
+void vMidiTaskISR(void)
+{
+    // Handle MIDI UART interrupt (e.g., read incoming MIDI data)
+    while (uart_is_readable(MIDI_UART_ID)) {
+        uint8_t midi_byte = uart_getc(MIDI_UART_ID);
+        // Process the received MIDI byte (not implemented here)
+    }
+}
+
 void vMidiTaskInit(void)
 {
     // Initialize UART for MIDI communication
@@ -19,7 +28,7 @@ void vMidiTaskInit(void)
     uart_set_hw_flow(MIDI_UART_ID, false, false);
     uart_set_format(MIDI_UART_ID, 8, 1, UART_PARITY_NONE);
     uart_set_fifo_enabled(MIDI_UART_ID, false);
-    irq_set_exclusive_handler(UART1_IRQ, NULL); // No IRQ handler for now
+    irq_set_exclusive_handler(UART1_IRQ, vMidiTaskISR); // No IRQ handler for now
 }
 
 void vMidiTask(void *pvParameters)

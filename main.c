@@ -37,6 +37,7 @@ void vAliveTask(void *pvParameters)
     {
         vTaskDelay(pdMS_TO_TICKS(500));
         gpio_xor_mask( 1u << aliveTASK_LED );
+        log_msg("Alive Task Heartbeat");
     }
 }
 
@@ -78,6 +79,7 @@ int main( void )
 				NULL );	
 
     /* Initialize Tasks */
+    vLogTaskInit();
     vAudioTaskInit();
     vMidiTaskInit();
 
@@ -91,7 +93,7 @@ static void prvSetupHardware( void )
 {
     // Set a 132.000 MHz system clock to more evenly divide the audio frequencies
     set_sys_clock_khz(132000, true);
-    stdio_init_all();
+    //stdio_init_all();
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, 1);
     gpio_put(PICO_DEFAULT_LED_PIN, !PICO_DEFAULT_LED_PIN_INVERTED);

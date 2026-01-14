@@ -30,8 +30,10 @@ static void process_audio(const int32_t* input, int32_t* output, size_t num_fram
 }
 
 static void dma_i2s_in_handler(void) {
-    xSemaphoreGiveFromISR(xAudioISRSemaphore, NULL);
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(xAudioISRSemaphore, &xHigherPriorityTaskWoken);
     dma_hw->ints0 = 1u << i2s.dma_ch_in_data;  // clear the IRQ
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void vAudioTaskInit(void)
