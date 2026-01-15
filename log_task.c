@@ -99,6 +99,8 @@ void vLoggingTask(void *pvParameters) {
     LogMessage_t msg_data;
     char formatted_buf[128];
     
+    log_msg("Logging Task Initialized");
+
     for(;;)
     {
 

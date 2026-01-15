@@ -37,7 +37,7 @@ void vAliveTask(void *pvParameters)
     {
         vTaskDelay(pdMS_TO_TICKS(500));
         gpio_xor_mask( 1u << aliveTASK_LED );
-        log_msg("Alive Task Heartbeat");
+        //log_msg("Alive Task Heartbeat");
     }
 }
 

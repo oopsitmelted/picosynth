@@ -6,6 +6,7 @@
 #include "i2s.h"
 #include "sine.h"
 #include "hardware/dma.h"
+#include "log_task.h"
 
 float phase = 0;
 const float phase_increment = 440.0f * 1024.0f / 48000.0f; // 440Hz tone
@@ -53,6 +54,8 @@ void vAudioTaskInit(void)
 
 void vAudioTask(void *pvParameters)
 {
+    log_msg("Audio Task Initialized");
+
     i2s_program_start_synched(pio0, &i2s_config_default, dma_i2s_in_handler, &i2s);
 	for( ;; )
     {
