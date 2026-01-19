@@ -18,17 +18,18 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 add_executable(synth
-        main.c
-        log_task.c
-        midi_task.c
-        audio_task.c
-        i2s.c
+        src/main.c
+        src/log_task.c
+        src/midi_task.c
+        src/audio_task.c
+        src/i2s.c
         )
 
-pico_generate_pio_header(synth ${CMAKE_CURRENT_LIST_DIR}/i2s.pio)
+pico_generate_pio_header(synth ${CMAKE_CURRENT_LIST_DIR}/src/i2s.pio)
 
 target_include_directories(synth PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/src
         ${CMAKE_CURRENT_LIST_DIR}/../../Common/include)
 
 target_link_libraries(synth 
