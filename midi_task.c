@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "log_task.h"
+#include "audio_task.h"
+#include <math.h>
 
 #define MIDI_UART_ID      uart1
 #define MIDI_BAUD_RATE    31250
@@ -17,6 +19,19 @@
 
 static SemaphoreHandle_t xMidiRxSem = NULL;
 static QueueSetHandle_t xMidiQueueSet = NULL;
+
+// Midi Note on/off state machine
+
+void vMidiProcessNote(uint8_t status, uint8_t data1, uint8_t data2)
+{
+    uint8_t command = status & 0xF0;
+    if (command == 0x90 && data2 > 0) { // Note On
+        float frequency = 440.0f * powf(2.0f, (data1 - 69) / 12.0f);
+        vAudioTaskSetFrequency(1, frequency); // Note on
+    } else if (command == 0x80 || (command == 0x90 && data2 == 0)) { // Note Off
+        vAudioTaskSetFrequency(0, 0.0f); // Note off
+    }
+}
 
 void vMidiTaskISR(void)
 {
@@ -66,11 +81,31 @@ void vMidiTask(void *pvParameters)
 
         // Read MIDI data
         while (uart_is_readable(MIDI_UART_ID)) {
+            static uint8_t status = 0;
+            static uint8_t data1 = 0;
+            static uint8_t data2 = 0;
+            static uint8_t data_count = 0;
+
             uint8_t byte = uart_getc(MIDI_UART_ID);
             // Log received MIDI byte
             char log_buf[32];
             snprintf(log_buf, sizeof(log_buf), "MIDI RX: 0x%02X", byte);
             log_msg(log_buf);   
+
+            // Process MIDI byte
+            if (byte & 0x80) { // Status byte
+                status = byte;
+                data_count = 0;
+            } else { // Data byte
+                if (data_count == 0) {
+                    data1 = byte;
+                    data_count++;
+                } else if (data_count == 1) {
+                    data2 = byte;
+                    data_count = 0;
+                    vMidiProcessNote(status, data1, data2);
+                }
+            }
         }
         uart_set_irq_enables(MIDI_UART_ID, true, false);
     }

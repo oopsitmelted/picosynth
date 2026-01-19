@@ -8,20 +8,43 @@
 #include "hardware/dma.h"
 #include "log_task.h"
 
-float phase = 0;
-const float phase_increment = 440.0f * 1024.0f / 48000.0f; // 440Hz tone
+static float phase = 0;
+static float freq = 440.0f; // Default frequency A4
+static uint8_t note_on = 0;
 
 static __attribute__((aligned(8))) pio_i2s i2s;
+
+typedef struct {
+    uint8_t note_on;
+    float frequency;
+} AudioMessage_t;
+
+#define AUDIO_QUEUE_LENGTH 10
+static QueueHandle_t xAudioQueue;
 static SemaphoreHandle_t xAudioISRSemaphore;
 static QueueSetHandle_t xAudioQueueSet;
 
+void vAudioTaskSetFrequency(uint8_t note_on, float frequency) {
+    AudioMessage_t msg;
+    msg.frequency = frequency;
+    msg.note_on = note_on;
+    xQueueSendToBack(xAudioQueue, &msg, 0);
+}
+
 static void process_audio(const int32_t* input, int32_t* output, size_t num_frames) {
+    float phase_increment = freq * 1024.0f / 48000.0f;
+
     gpio_put(2, 1);
     for (size_t i = 0; i < num_frames * 2; i = i + 2) {
         int16_t sine_val = sine_table[(uint16_t)phase] / 8;
+
+        if (!note_on) {
+            sine_val = 0;
+        }
+
         output[i] = sine_val << 16;
         output[i + 1] = sine_val << 16;
-        //output[i] = 0x89ABCDEF;
+
         phase += phase_increment;
         if (phase >= 1024.0f) {
             phase -= 1024.0f;
@@ -48,8 +71,10 @@ void vAudioTaskInit(void)
     xAudioISRSemaphore = xSemaphoreCreateBinary();
 
     // Set up Queue Set
-    xAudioQueueSet = xQueueCreateSet(1);
+    xAudioQueue = xQueueCreate(AUDIO_QUEUE_LENGTH, sizeof(AudioMessage_t));
+    xAudioQueueSet = xQueueCreateSet(AUDIO_QUEUE_LENGTH + 1);
     xQueueAddToSet(xAudioISRSemaphore, xAudioQueueSet);
+    xQueueAddToSet(xAudioQueue, xAudioQueueSet);
 }
 
 void vAudioTask(void *pvParameters)
@@ -76,6 +101,17 @@ void vAudioTask(void *pvParameters)
                 // It is currently inputting the first buffer, so we write to the second
                 process_audio(&i2s.input_buffer[STEREO_BUFFER_SIZE], &i2s.output_buffer[STEREO_BUFFER_SIZE], AUDIO_BUFFER_FRAMES);
             }
+        }
+        else
+        if (xHandle == xAudioQueue) {
+            char msg_buf[64];
+            AudioMessage_t msg;
+            xQueueReceive(xAudioQueue, &msg, 0);
+
+            snprintf(msg_buf, sizeof(msg_buf), "Note on: %d, Freq: %.2f Hz", msg.note_on, msg.frequency);
+            log_msg(msg_buf);
+            freq = msg.frequency;
+            note_on = msg.note_on;
         }
     }
 }

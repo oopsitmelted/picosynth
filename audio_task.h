@@ -6,5 +6,6 @@
 
 void vAudioTask(void *pvParameters);
 void vAudioTaskInit(void);
+void vAudioTaskSetFrequency(uint8_t note_on, float frequency);
 
 #endif // AUDIO_TASK_H
