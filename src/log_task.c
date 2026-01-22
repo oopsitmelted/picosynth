@@ -6,11 +6,11 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
+#include "app_config.h"
 #include <string.h>
 #include <stdio.h>
 
-#define UART_PORT uart0
-#define UART_BAUD 115200
+extern uint32_t ulGetRunTimeCounterValue(void);
 
 #define MAX_LOG_MSG_LEN 64
 
@@ -48,9 +48,9 @@ static bool tx_buffer_empty() {
 }
 
 static void on_uart_irq(void) {
-    if (uart_is_writable(UART_PORT)) {
+    if (uart_is_writable(UART_ID_LOG)) {
         // Disable TX interrupt
-        uart_set_irq_enables(UART_PORT, false, false);
+        uart_set_irq_enables(UART_ID_LOG, false, false);
         
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         xSemaphoreGiveFromISR(xUartTxSem, &xHigherPriorityTaskWoken);
@@ -66,15 +66,16 @@ void vLogTaskInit(void) {
     xQueueAddToSet(xLogQueue, xLogQueueSet);
     xQueueAddToSet(xUartTxSem, xLogQueueSet);
 
-    uart_set_fifo_enabled(UART_PORT, true);
-    uart_init(UART_PORT, UART_BAUD);
-    uart_set_format(UART_PORT, 8, 1, UART_PARITY_NONE);
-    gpio_set_function(0, GPIO_FUNC_UART); // TX
-    gpio_set_function(1, GPIO_FUNC_UART); // RX
+    uart_set_fifo_enabled(UART_ID_LOG, true);
+    uart_init(UART_ID_LOG, BAUD_RATE_LOG);
+    uart_set_format(UART_ID_LOG, 8, 1, UART_PARITY_NONE);
+    gpio_set_function(PIN_LOG_TX, GPIO_FUNC_UART); // TX
+    gpio_set_function(PIN_LOG_RX, GPIO_FUNC_UART); // RX
     
-    irq_set_exclusive_handler(UART0_IRQ, on_uart_irq);
-    irq_set_enabled(UART0_IRQ, true);
-    uart_set_irq_enables(UART_PORT, false, false);
+    int uart_irq = (UART_ID_LOG == uart0) ? UART0_IRQ : UART1_IRQ;
+    irq_set_exclusive_handler(uart_irq, on_uart_irq);
+    irq_set_enabled(uart_irq, true);
+    uart_set_irq_enables(UART_ID_LOG, false, false);
 }
 
 void log_msg(const char *msg) {
@@ -111,10 +112,10 @@ void vLoggingTask(void *pvParameters) {
         }
 
         // Write as much data as possible to UART
-        while (!tx_buffer_empty() && uart_is_writable(UART_PORT)) {
+        while (!tx_buffer_empty() && uart_is_writable(UART_ID_LOG)) {
             uint8_t c;
             if (tx_buffer_get(&c)) {
-                uart_putc_raw(UART_PORT, c);
+                uart_putc_raw(UART_ID_LOG, c);
             }
         }
         
@@ -140,9 +141,9 @@ void vLoggingTask(void *pvParameters) {
         }
         
         if (!tx_buffer_empty()) {
-            uart_set_irq_enables(UART_PORT, false, true);
+            uart_set_irq_enables(UART_ID_LOG, false, true);
         } else {
-            uart_set_irq_enables(UART_PORT, false, false);
+            uart_set_irq_enables(UART_ID_LOG, false, false);
         }
         
     }

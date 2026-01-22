@@ -4,13 +4,10 @@
 #include "queue.h"
 #include "audio_task.h"
 #include "i2s.h"
-#include "sine.h"
+#include "synth_engine.h"
 #include "hardware/dma.h"
 #include "log_task.h"
-
-static float phase = 0;
-static float freq = 440.0f; // Default frequency A4
-static uint8_t note_on = 0;
+#include "app_config.h"
 
 static __attribute__((aligned(8))) pio_i2s i2s;
 
@@ -31,28 +28,6 @@ void vAudioTaskSetFrequency(uint8_t note_on, float frequency) {
     xQueueSendToBack(xAudioQueue, &msg, 0);
 }
 
-static void process_audio(const int32_t* input, int32_t* output, size_t num_frames) {
-    float phase_increment = freq * 1024.0f / 48000.0f;
-
-    gpio_put(2, 1);
-    for (size_t i = 0; i < num_frames * 2; i = i + 2) {
-        int16_t sine_val = sine_table[(uint16_t)phase] / 8;
-
-        if (!note_on) {
-            sine_val = 0;
-        }
-
-        output[i] = sine_val << 16;
-        output[i + 1] = sine_val << 16;
-
-        phase += phase_increment;
-        if (phase >= 1024.0f) {
-            phase -= 1024.0f;
-        }
-    }
-    gpio_put(2, 0);
-}
-
 static void dma_i2s_in_handler(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(xAudioISRSemaphore, &xHigherPriorityTaskWoken);
@@ -63,9 +38,12 @@ static void dma_i2s_in_handler(void) {
 void vAudioTaskInit(void)
 {
     // Initialize GPIO for debugging
-    gpio_init(2);
-    gpio_set_dir(2, GPIO_OUT);
-    gpio_put(2, 0);
+    gpio_init(PIN_DEBUG_TIMING);
+    gpio_set_dir(PIN_DEBUG_TIMING, GPIO_OUT);
+    gpio_put(PIN_DEBUG_TIMING, 0);
+
+    // Initialize Synth Engine
+    synth_engine_init();
 
     // Set up ISR semaphore
     xAudioISRSemaphore = xSemaphoreCreateBinary();
@@ -90,17 +68,20 @@ void vAudioTask(void *pvParameters)
             
             xSemaphoreTake(xAudioISRSemaphore, 0);
 
+            gpio_put(PIN_DEBUG_TIMING, 1);
+
             /* We're double buffering using chained TCBs. By checking which buffer the
             * DMA is currently reading from, we can identify which buffer it has just
             * finished reading (the completion of which has triggered this interrupt).
             */
             if (*(int32_t**)dma_hw->ch[i2s.dma_ch_in_ctrl].read_addr == i2s.input_buffer) {
                 // It is inputting to the second buffer so we can overwrite the first
-                process_audio(i2s.input_buffer, i2s.output_buffer, AUDIO_BUFFER_FRAMES);
+                synth_engine_process(i2s.output_buffer, AUDIO_BUFFER_FRAMES);
             } else {
                 // It is currently inputting the first buffer, so we write to the second
-                process_audio(&i2s.input_buffer[STEREO_BUFFER_SIZE], &i2s.output_buffer[STEREO_BUFFER_SIZE], AUDIO_BUFFER_FRAMES);
+                synth_engine_process(&i2s.output_buffer[STEREO_BUFFER_SIZE], AUDIO_BUFFER_FRAMES);
             }
+            gpio_put(PIN_DEBUG_TIMING, 0);
         }
         else
         if (xHandle == xAudioQueue) {
@@ -110,8 +91,13 @@ void vAudioTask(void *pvParameters)
 
             snprintf(msg_buf, sizeof(msg_buf), "Note on: %d, Freq: %.2f Hz", msg.note_on, msg.frequency);
             log_msg(msg_buf);
-            freq = msg.frequency;
-            note_on = msg.note_on;
+            
+            synth_engine_set_frequency(msg.frequency);
+            if (msg.note_on) {
+                synth_engine_note_on();
+            } else {
+                synth_engine_note_off();
+            }
         }
     }
 }

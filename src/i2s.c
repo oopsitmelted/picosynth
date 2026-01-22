@@ -27,7 +27,16 @@
 #include "hardware/irq.h"
 #include "i2s.pio.h"
 
-const i2s_config i2s_config_default = {48000, 256, 16, 10, 6, 7, 8, false};
+const i2s_config i2s_config_default = {
+    AUDIO_SAMPLE_RATE, 
+    256, 
+    AUDIO_BIT_DEPTH, 
+    PIN_I2S_SCK, 
+    PIN_I2S_DOUT, 
+    PIN_I2S_DIN, 
+    PIN_I2S_BCLK, 
+    false
+};
 
 static float pio_div(float freq, uint16_t* div, uint8_t* frac) {
     float clk   = (float)clock_get_hz(clk_sys);

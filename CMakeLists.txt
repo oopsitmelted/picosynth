@@ -21,7 +21,9 @@ add_executable(synth
         src/main.c
         src/log_task.c
         src/midi_task.c
+        src/midi_parser.c
         src/audio_task.c
+        src/synth_engine.c
         src/i2s.c
         )
 

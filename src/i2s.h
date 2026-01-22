@@ -25,8 +25,12 @@
 #ifndef I2S_TEST_I2S_H
 #define I2S_TEST_I2S_H
 
-#define AUDIO_BUFFER_FRAMES 48
-#define STEREO_BUFFER_SIZE  AUDIO_BUFFER_FRAMES * 2  // roughly 1ms, 48 L + R words
+#include <stdio.h>
+#include "hardware/pio.h"
+#include "app_config.h"
+
+// AUDIO_BUFFER_FRAMES is now defined in app_config.h
+#define STEREO_BUFFER_SIZE  (AUDIO_BUFFER_FRAMES * 2)
 
 typedef struct i2s_config {
     uint32_t fs;
